@@ -1,0 +1,7 @@
+__pycache__
+.pytest_cache
+/*results*
+/*output*
+/*.out
+/old
+Pipfile*.lock

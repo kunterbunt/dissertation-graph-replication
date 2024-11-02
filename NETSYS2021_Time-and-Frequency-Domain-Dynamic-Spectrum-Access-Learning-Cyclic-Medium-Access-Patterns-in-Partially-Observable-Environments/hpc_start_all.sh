@@ -1,0 +1,5 @@
+sbatch comparison_convergence_over_channels.sh
+sbatch comparison_convergence_over_sample_length.sh
+sbatch comparison_loss_over_time.sh
+sbatch fully_observable_comparison_loss_over_time_matrix_input.sh
+sbatch partially_observable_comparison_loss_over_time_matrix_input.sh

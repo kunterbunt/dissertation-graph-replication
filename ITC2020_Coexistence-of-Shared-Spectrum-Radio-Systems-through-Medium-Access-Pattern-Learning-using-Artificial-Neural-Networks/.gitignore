@@ -1,0 +1,4 @@
+_imgs/
+_data/
+*__pycache__/
+*.lock
