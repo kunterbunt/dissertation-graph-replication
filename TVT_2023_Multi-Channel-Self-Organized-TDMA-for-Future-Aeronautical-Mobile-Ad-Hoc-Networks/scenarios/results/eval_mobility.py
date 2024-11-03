@@ -1,5 +1,3 @@
-import warnings
-warnings.simplefilter(action='ignore', category=FutureWarning)
 import settings
 from datetime import time
 import pandas as pd
@@ -22,9 +20,6 @@ json_label_num_active_neighbors_vals_swarm_1 = 'num_active_neighbors_vals_swarm_
 json_label_num_active_neighbors_times_swarm_1 = 'num_active_neighbors_times_swarm_1'
 json_label_num_active_neighbors_vals_swarm_2 = 'num_active_neighbors_vals_swarm_2'
 json_label_num_active_neighbors_times_swarm_2 = 'num_active_neighbors_times_swarm_2'
-
-json_label_num_packet_drop_vals = 'avg_packet_drop_vals'
-json_label_num_packet_drop_times = 'avg_packet_drop_times'
 
 json_label_mac_delay_vals_1 = 'mac_delays_swarm_1'
 json_label_mac_delay_vals_2 = 'mac_delays_swarm_2'
@@ -50,8 +45,6 @@ def parse(dir, num_reps, num_users_per_swarm, json_filename, time_slot_duration,
 	
 	avg_packet_drop_times = []
 	avg_packet_drop_vals = []
-	sliding_window_dropped_packets = []
-	intervals_dropped_packets = []
 
 	avg_mac_times = []
 	avg_mac_delay_1 = []
@@ -97,14 +90,7 @@ def parse(dir, num_reps, num_users_per_swarm, json_filename, time_slot_duration,
 				num_active_neighbors_times_mat_1[rep].append([float(s) for s in num_active_neighbors_results_1['vectime'].values[0].split(' ')])
 				num_active_neighbors_times_mat_2[rep].append([float(s) for s in num_active_neighbors_results_2['vectime'].values[0].split(' ')])
 				num_active_neighbors_vals_mat_1[rep].append([float(s) for s in num_active_neighbors_results_1['vecvalue'].values[0].split(' ')])
-				num_active_neighbors_vals_mat_2[rep].append([float(s) for s in num_active_neighbors_results_2['vecvalue'].values[0].split(' ')])
-				
-				# packets dropped
-				packet_drops_results_1 = results_vec[(results_vec.type=='vector') & (results_vec.name=='mcsotdma_statistic_dropped_packets_this_slot:vector') & (results_vec.module=='mobility.aircraft_group1[' + str(i) + '].wlan[0].linkLayer')]
-				packet_drops_results_2 = results_vec[(results_vec.type=='vector') & (results_vec.name=='mcsotdma_statistic_dropped_packets_this_slot:vector') & (results_vec.module=='mobility.aircraft_group2[' + str(i) + '].wlan[0].linkLayer')]
-				avg_packet_drop_vals[rep].append(np.add(np.array([float(s) for s in packet_drops_results_1['vecvalue'].values[0].split(' ')]), np.array([float(s) for s in packet_drops_results_2['vecvalue'].values[0].split(' ')])))				
-				avg_packet_drop_times[rep].append(np.array([float(s) for s in packet_drops_results_1['vectime'].values[0].split(' ')]))
-				num_time_slots = len(avg_packet_drop_times[rep][-1])
+				num_active_neighbors_vals_mat_2[rep].append([float(s) for s in num_active_neighbors_results_2['vecvalue'].values[0].split(' ')])			
 
 				# MAC delays
 				mac_results_1 = results_vec[(results_vec.type=='vector') & (results_vec.name=='mcsotdma_statistic_broadcast_mac_delay:vector') & (results_vec.module=='mobility.aircraft_group1[' + str(i) + '].wlan[0].linkLayer')]				
@@ -113,19 +99,7 @@ def parse(dir, num_reps, num_users_per_swarm, json_filename, time_slot_duration,
 
 				mac_results_2 = results_vec[(results_vec.type=='vector') & (results_vec.name=='mcsotdma_statistic_broadcast_mac_delay:vector') & (results_vec.module=='mobility.aircraft_group2[' + str(i) + '].wlan[0].linkLayer')]				
 				this_rep_mac_vals_swarm_2[-1].extend(np.array([float(s) for s in mac_results_2['vecvalue'].values[0].split(' ')]))
-				this_rep_mac_times_swarm_2[-1] = [float(s) for s in mac_results_2['vectime'].values[0].split(' ')]
-									
-			# in a sliding window over ten time slots, go over the no. of dropped packets
-			sum_dropped_packets = np.zeros(int(num_time_slots/10))			
-			i = 0
-			for t in range(10, num_time_slots, 10):
-				if rep == 0:
-					intervals_dropped_packets.append(t)
-				for n in range(num_users_per_swarm):
-					sum_dropped_packets[i] += np.sum(avg_packet_drop_vals[-1][n][t-10:t-1])
-				i += 1
-			sliding_window_dropped_packets.append(sum_dropped_packets)
-			
+				this_rep_mac_times_swarm_2[-1] = [float(s) for s in mac_results_2['vectime'].values[0].split(' ')]												
 
 			# captured MAC delays are saved for each user 
 			# now get mean delay over all users in a swarm as sliding window over simulation time			
@@ -177,15 +151,12 @@ def parse(dir, num_reps, num_users_per_swarm, json_filename, time_slot_duration,
 	json_data[json_label_num_active_neighbors_times_swarm_1] = np.array(num_active_neighbors_times_mat_1).tolist()
 	json_data[json_label_num_active_neighbors_vals_swarm_1] = np.array(num_active_neighbors_vals_mat_1).tolist()
 	json_data[json_label_num_active_neighbors_times_swarm_2] = np.array(num_active_neighbors_times_mat_2).tolist()
-	json_data[json_label_num_active_neighbors_vals_swarm_2] = np.array(num_active_neighbors_vals_mat_2).tolist()
-
-	json_data[json_label_num_packet_drop_times] = np.array(intervals_dropped_packets).tolist()
-	json_data[json_label_num_packet_drop_vals] = np.array(sliding_window_dropped_packets).tolist()
+	json_data[json_label_num_active_neighbors_vals_swarm_2] = np.array(num_active_neighbors_vals_mat_2).tolist()	
 
 	json_data[json_label_mac_delay_vals_1] = np.array(avg_mac_delay_1).tolist()
 	json_data[json_label_mac_delay_vals_2] = np.array(avg_mac_delay_2).tolist()
 	json_data[json_label_mac_window_times] = np.array(avg_mac_times).tolist()
-	json_data[json_label_max_simtime] = max_simulation_time	
+	json_data[json_label_max_simtime] = max_sim_time	
 	json_data[json_label_num_time_slots] = num_time_slots	
 				
 	with open(json_filename, 'w') as outfile:
@@ -280,11 +251,11 @@ def get_aspect(ax):
 def plot_inset(ax, center, t, x=[], y=[], R=0, inset_width = 240, name=''):
 		inset_height = 7
 		aspect = get_aspect(ax)
-		ax.plot([center[0] - inset_width/2 , center[0] + inset_width/2, center[0] + inset_width/2, center[0] - inset_width/2, center[0] - inset_width/2],[center[1] - inset_height/2, center[1] - inset_height/2, center[1] + inset_height/2, center[1] + inset_height/2, center[1] - inset_height/2, ], color= '#333', lw=0.7)
+		ax.plot([center[0] - inset_width/2 , center[0] + inset_width/2, center[0] + inset_width/2, center[0] - inset_width/2, center[0] - inset_width/2],[center[1] - inset_height/2, center[1] - inset_height/2, center[1] + inset_height/2, center[1] + inset_height/2, center[1] - inset_height/2, ], color= '#333', lw=0.7, zorder=1)
 
-		ax.plot([center[0], t],[center[1]- inset_height / 2, -1], color='#333', lw=0.5)
-		ax.plot([t, t],[center[1]- inset_height / 2, -1], '--', color='#333', lw=0.5)
-		ax.plot([t, t],[center[1]+ inset_height / 2, 30], '--', color='#333', lw=0.5)
+		ax.plot([center[0], t],[center[1]- inset_height / 2, -1], color='#333', lw=0.5, zorder=1)
+		ax.plot([t, t],[center[1]- inset_height / 2, -1], '--', color='#333', lw=0.5, zorder=1)
+		ax.plot([t, t],[center[1]+ inset_height / 2, 30], '--', color='#333', lw=0.5, zorder=1)
 
 		for i in range(len(x)):
 			for j in range(len(x)):
@@ -295,7 +266,7 @@ def plot_inset(ax, center, t, x=[], y=[], R=0, inset_width = 240, name=''):
 					y2 = y[j]
 					dist = math.sqrt(math.pow(x1-x2,2) + math.pow(y1-y2,2))
 					if(dist <= R):
-						ax.plot([center[0] + x1, center[0] + x2],[center[1] + y1 / aspect,center[1] + y2 / aspect], color='#333', lw=0.2)
+						ax.plot([center[0] + x1, center[0] + x2],[center[1] + y1 / aspect,center[1] + y2 / aspect], color='#333', lw=0.2, zorder=1)
 
 		ax.scatter(center[0] + np.array(x), center[1] + np.array(y) / aspect, s=1.5, zorder=20, color='#333')
 		ax.text(center[0], center[1]+ inset_height / 2, name, ha='center', va='center', fontsize=8, bbox=dict(pad=2, lw=0.5, fc='#fff', color='#333'))
@@ -315,13 +286,7 @@ def plot(json_filename, graph_filename_active_neighbors, time_slot_duration, gra
 		num_active_neighbors_times_mat_1 = np.array(json_data[json_label_num_active_neighbors_times_swarm_1])		
 		num_active_neighbors_vals_mat_1 = np.array(json_data[json_label_num_active_neighbors_vals_swarm_1])
 		num_active_neighbors_times_mat_2 = np.array(json_data[json_label_num_active_neighbors_times_swarm_2])
-		num_active_neighbors_vals_mat_2 = np.array(json_data[json_label_num_active_neighbors_vals_swarm_2])		
-
-		intervals_dropped_packets = np.array(json_data[json_label_num_packet_drop_times])
-		sliding_window_dropped_packets = np.array(json_data[json_label_num_packet_drop_vals])
-		avg_dropped_packets = np.zeros((3, len(intervals_dropped_packets)))
-		for i in range(len(intervals_dropped_packets)):
-			avg_dropped_packets[:,i] = calculate_confidence_interval(sliding_window_dropped_packets[:, i])		
+		num_active_neighbors_vals_mat_2 = np.array(json_data[json_label_num_active_neighbors_vals_swarm_2])				
 
 		max_simulation_time = json_data[json_label_max_simtime]
 		# find average number of neighbors in half-a-second steps until maximum simulation time
@@ -399,12 +364,7 @@ def plot(json_filename, graph_filename_active_neighbors, time_slot_duration, gra
 		plt.xlabel('Simulation time $t$ [s]')
 		ax1.set_xticks([0, t0, t1, 400, t2, 800])
 		ax1.set_xticklabels(['0', '$t_0$', '$t_1$', '400', '$t_2$', '800'])
-		# and the no. of dropped packets on a second y-axis
-		ax2 = ax1.twinx()		
-		ax2.plot(intervals_dropped_packets*time_slot_duration/1000, avg_dropped_packets[0,:], color=colors[1], linewidth=.75, alpha=1, linestyle=':')
-		ax2.fill_between(intervals_dropped_packets*time_slot_duration/1000, avg_dropped_packets[1,:], avg_dropped_packets[2,:], color=colors[1], alpha=.5)
-		ax2.set_ylabel('sliding window over packet losses')		
-		ax2.tick_params(axis='y', colors=colors[1])		
+		
 		fig.tight_layout()
 		settings.init()
 		fig.set_size_inches((settings.fig_width*1.75, settings.fig_height), forward=False)
@@ -425,20 +385,39 @@ def plot(json_filename, graph_filename_active_neighbors, time_slot_duration, gra
 			avg_mac_delay_both_swarms[:,t] = np.mean([ci_1, ci_2], axis=0)
 
 		fig, ax1 = plt.subplots()
-		ax1.plot(times_vec, avg_neighbors_both[0,:], color=colors[0], linewidth=.75, alpha=1, linestyle=':')
-		ax1.fill_between(times_vec, avg_neighbors_both[1,:], avg_neighbors_both[2,:], color=colors[0], alpha=.5)
+		ax1.plot(times_vec, avg_neighbors_both[0,:], color=colors[0], linewidth=.75, alpha=1, linestyle=':', zorder=0)
+		ax1.fill_between(times_vec, avg_neighbors_both[1,:], avg_neighbors_both[2,:], color=colors[0], alpha=.5, zorder=0)
 		ax1.tick_params(axis='y', colors=colors[0])
 		ax1.set_ylabel('avg no. of discovered neighbors')
 		plt.xlabel('Simulation time $t$ [s]')
 		ax2 = ax1.twinx()		
-		ax2.plot(avg_mac_times, avg_mac_delay_both_swarms[0,:] * time_slot_duration, color=colors[1], linewidth=.75, alpha=1, linestyle='-')
-		ax2.fill_between(avg_mac_times, avg_mac_delay_both_swarms[1,:] * time_slot_duration, avg_mac_delay_both_swarms[2,:] * time_slot_duration, color=colors[1], alpha=.5)
+		ax2.plot(avg_mac_times, avg_mac_delay_both_swarms[0,:] * time_slot_duration, color=colors[1], linewidth=.75, alpha=1, linestyle='-', zorder=0)
+		ax2.fill_between(avg_mac_times, avg_mac_delay_both_swarms[1,:] * time_slot_duration, avg_mac_delay_both_swarms[2,:] * time_slot_duration, color=colors[1], alpha=.5, zorder=0)
 		ax2.set_ylabel('sliding window over MAC delay [ms]', fontsize=8)
 		ax2.tick_params(axis='y', colors=colors[1])		
 		ax1.set_xticks([0, t0, t1, 400, t2, 800])
 		ax1.set_xticklabels(['0', '$t_0$', '$t_1$', '400', '$t_2$', '800'])
 		for t in [t0, t1, t2]:
 			ax1.axvline(t, linestyle='--', color='k', linewidth=.5)
+
+		scale = 6/10000
+		R = 100
+
+		trajectories = get_trajectories()
+		t0 = 140
+		(x,y) = get_topology_1()
+		inset_center = (160, 8.5)
+		plot_inset(ax1, inset_center, t0, x, y, R, 280, 'Disconnected')
+
+		t1 = 270.55
+		(x,y) = get_topology_2()
+		inset_center = (460, 8.5)
+		plot_inset(ax1, inset_center, t1, x, y, R, 260, 'First contact')
+
+		t2 = 564
+		(x,y) = get_topology_3()
+		inset_center = (700, 8.5)
+		plot_inset(ax1, inset_center, t2, x, y, R, 160, 'Full mesh')
 
 		fig.tight_layout()
 		settings.init()
